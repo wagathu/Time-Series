@@ -1,0 +1,136 @@
+---
+title: "Smoothing Data in r"
+author: "B.M Njuguna"
+execute: 
+  warning: false
+format: html
+editor: visual
+---
+
+### Contents
+
+[Introduction]
+
+[Techniques of Smoothing Time Series Data]
+
+[1. Exponential Smoothing]
+
+[Simple Exponential Smoothing]
+
+[Interpretation of Accuracy function results]
+
+[2. Holt's Method Technique](#holts-method-technique)
+
+[3. Holt-Winter's Seasonal Technique](#holt-winters-seasonal-technique)
+
+[4.Moving Average Technique]
+
+### Introduction
+
+Smoothing is a technique of removing noise from a data set. Smoothing in time series is usually done to help see the patterns and trends more easily. For example, in a seasonal data, smoothing out seasonality can be done, so as to see or identify the trend. Sometimes, the term filter is used to describe smoothing procedures.
+
+### Techniques of Smoothing Time Series Data
+
+There are many techniques of smoothing data, however the four most common techniques are; 1. exponential smoothing 2. moving average smoothing 3. double exponential smoothing 4. Holt-winters smoothing technique
+
+#### 1. Exponential Smoothing
+
+There are many types of exponential smoothing depending on trends and seasonality. Here, the exponential functions assign exponentially decreasing weights. That is, greater weights are placed on recent values and lesser weights are placed on older values. In R, we require two packages *fpp2* and *tidyverse*.
+
+##### Simple Exponential Smoothing
+
+Simple Exponential Smoothing is used for data with no trend or seasonality patterns. As mentioned earlier, recent values have more weights than older values. The smoothing parameter or alpha in R determine the weight of each parameter, where 0\<α\<1. If α is close to zero, it gives more weight to the older values and if α is close to one, it gives more weight to the recent values. in R, we use the *ses()*, as follows
+
+```{r}
+library(tidyverse)
+library(fpp2)
+goog.train<-window(goog,end=900)
+goog.test<-window(goog,start=901)
+sesgoog<-ses(goog.train,alpha = .2,h=100)
+autoplot(sesgoog)
+```
+
+The "blue" part shows the Confidence bands for the forecast From the output graph, a straight or flat lined estimate is projected towards the future, hence we can say that it is not capturing the present trend. To correct this, we can use the *diff()* function to remove the trend from the data as follows.
+
+```{r}
+goog.diff.train<-diff(goog.train)
+autoplot(goog.diff.train)
+sesgoogdifftrain<-ses(goog.diff.train,alpha = .2,h=100)
+autoplot(sesgoogdifftrain)
+```
+
+In order to understand the performance of our model, we need to compare our forecast with our validation or testing data *goog.test*. Since the *goog.train* data was differenced we also need to difference the *goog.test* data and then compare, using the *accuracy( x, y) where x is the forecast and y is the actual or the validation data* function as follows;
+
+```{r}
+goog.dif.test<-diff(goog.test)
+accuracy(sesgoogdifftrain,goog.dif.test)
+
+```
+
+##### Interpretation of Accuracy function results
+
+The accuracy function gives the following results; 1. Mean Absolute Percentage Error (MAPE) 2. Mean Absolute Error (MAE) 3. Root Mean Square Error (RMSE) 4. Mean Error (ME) 5. Mean Percentage Error (MPE) 6. Mean Absolute Squared Error (MASE) 7. ACF1 :Autocorrelation of errors at lag 1
+
+1.  Root Mean Square Error (RMSE)- is a measure of the differences between values predicted by a model or an estimator and the values observed. It is calculated as :
+
+    $RMSE$= $\sqrt\frac{{\Sigma_{i=1}^{N}(x_i - \hat{x_i})^{2}}}{N}$
+
+    where $x_i$- Actual observations time series $\hat{x_i}$ - estimated time series N- number of non-missing data points
+
+2.  If correlation coefficient is one, then the RMSE will be zero. Therefore, the more the RMSE approaches zero, the better the fit, hence you should always aim at minimizing it, where in this case, it can be done by changing the alpha value.
+
+3.  Mean Absolute Error (MAE)-smaller values indicate a better fit and a perfect fit equals to zero. It is usually calculated as MAE=mean(abs(predicted-actual)).
+
+4.  Mean Absolute Percentage Error (MAPE)-smaller values indicate a better fit and a perfect fit equals to zero
+
+Normally, in machine learning, data sets are split into two subsets. The first subset is known as **training data**. It is a portion of the actual data set that is fed into machine learning model to discover and learn patterns. That is why we used *goog.train* above. Testing data is used to evaluate the performance of the model, and optimize it for improved results. That is why we used **goog.test**. The training data should be larger than the test normally 80% and 20% respectively. Here we split the *goog* data set into two using the *window ()* function. Accuracy function cannot be used with the test data alone, but can used with training data because it "has" the forecasts.
+
+### 2. Holt's Method Technique {#holts-method-technique}
+
+This is a technique that works with data having a trend but no seasonality. Here, the *holt()* function is used. It uses two smoothing patterns, alpha and beta.
+
+### 3. Holt-Winter's Seasonal Technique {#holt-winters-seasonal-technique}
+
+It is used for data with both seasonal patterns and trend. It can be done through **additive model** or **multiplicative model**. The additive model is used when the magnitude of the seasonal pattern of data is constant throughout while the multiplicative model is used when the magnitude increases over time. This technique uses three smoothing parameters, alpha, beta and gamma. We use the *decompose ()* function to do this kind of smoothing. Lets work with *qcement* data.
+
+```{r}
+qcement.train<-window(qcement,end=c(2012,4))
+qcement.test<-window(qcement,start=c(2013,1))
+##Appling the holt-winters method on qcement
+autoplot(decompose(qcement))
+
+
+```
+
+Using the *ets()* we can create an Additive model that deals with error,trend and seasonality. for additive model, we use *model-"AAA"* function as follows;
+
+```{r}
+qcementets<-ets(qcement.train,model = "AAA")
+autoplot(forecast(qcementets))
+
+
+```
+
+Now lets check our smoothing parameters as well as the accuracy of the model
+
+```{r}
+summary(qcementets)
+checkresiduals(qcementets)
+
+#Then lets forecast
+qcementforecast<-forecast(qcementets)
+
+#Lets check the Accuracy
+
+accuracy(qcementforecast,qcement.test)
+
+
+
+
+```
+
+For multiplicative case, we use *model="MAM"* function.
+
+### 4.Moving Average Technique
+
+For simple moving average method, we use the function *sma()* from the *smooth* package. SMA does not estimate the parameters.
